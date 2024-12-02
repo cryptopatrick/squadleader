@@ -1,18 +1,21 @@
-/// squadleader is a type system and game engine basedon on the rules of the classic
-/// board game with the same name.
-/// This crate is not a game. It only models the types and rules of the original game.
-/// Our hope is that this crate can serve as a starting point for anyone looking to
-/// model small unit infantry combat.
-///
-/// References to the original 4th Edition Squad Leader rules are made where applicable.
-/// Example of a rule reference:
-/// SL12.4 A leader may _not_ apply his leadership rating to his own Morale Check;
-/// i.e., an 8-1 leader must roll an 8 or less (with a pair of 6-sided dice)
-/// to pass a "M" Morale Check.
-}
+//! _squadleader_ is a crate containing a type system and a rule engine that is
+//! based on the rules of the classic boardgame with the same name.
+//! Please note, there's no affiliation between this makers of this crate
+//! and the publishers of the boardgame.
+//!
+//! Further, this crate is not supposed to be a game. However, it can probably
+//! be used as a starting point, create one.
+//! The purpose of this crate is to model the types and rules of the original game.
+//! You can think of it as a type system and rule engine modeling the game of chess,
+//! without being an actual chess game that can be played.
+//!
+//! References to the original 4th Edition Squad Leader rules are included
+//! in the source, and expressed in the following manner:
+//! `SL1.1` refers to paragraph 1.1 in the original 4th ed. rule book.
 
-// TODO: UnitCounter represents a game piece that is not part of the game board.
 
+// "Courage, above all things, is the first quality of a warrior."
+// –Carl von Clausewitz
 
 ////////////////////////////////////////////////////////////////////////////////
 /// SL1.1
