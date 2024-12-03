@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! _squadleader_ is a crate containing a type system and a rule engine that is
 //! based on the rules of the classic boardgame with the same name.
 //! Please note, there's no affiliation between this makers of this crate
@@ -5,26 +6,26 @@
 //!
 //! Further, this crate is not supposed to be a game. However, it can probably
 //! be used as a starting point, create one.
-//! The purpose of this crate is to model the types and rules of the original game.
-//! You can think of it as a type system and rule engine modeling the game of chess,
-//! without being an actual chess game that can be played.
+//! The purpose of this crate is to model types and rules of the original game.
+//! You can think of it as a type system and rule engine modeling the game
+//! of chess, without being an actual playable chess game.
 //!
-//! References to the original 4th Edition Squad Leader rules are included
+//! References to the original 4th Edition Squad Leader rules are made
 //! in the source, and expressed in the following manner:
-//! `SL1.1` refers to paragraph 1.1 in the original 4th ed. rule book.
-
+//! `SLX.Y` refers to paragraph X.Y in the original 4th ed. rule book.
+//! All rules, that do not reference the original game, are labled RX.Y.
 
 // "Courage, above all things, is the first quality of a warrior."
 // –Carl von Clausewitz
 
 ////////////////////////////////////////////////////////////////////////////////
-/// SL1.1
+/// R1.1
 /// A generic struct representing any target (building, unit, armour, etc).
-/// Every target has a location (in terms of longitude, latitude), and an elevation.
-/// Every target also has a armor value - a value that has to be super seeded for
-/// any destructive force to have a chance to inflict damage on the target.
-/// Finally, every target has a health value - how much damage it can withstand
-/// before it is destroyed.
+/// Every target has a location (in terms of longitude, latitude), and an
+/// elevation. Every target also has an armor value - a value that has to be
+/// super seeded for any destructive force to have a chance to inflict damage
+/// on the target. Finally, every target has a health value - how much damage it
+/// can withstand before it is destroyed.
 struct Target {
     location: HexId,
     elevation: u8,
@@ -32,90 +33,150 @@ struct Target {
     health: u8,
 }
 
-// A generic type describing anything on the battlefield that can be given an order.
-// Anything that can be given an order can refuse to do so - usually due to being
-// in a morally broken condition or having surrendered.
-// For any type to have the Orderable trait they must implement the fn communicate.
-pub trait Orderable {
-    fn copythat() -> String;
-}
-// TODO: write a generic function that can be used to identify units that can communicate.
 
 
-/// Units
-
-/// Squad
-/// SL2.2 Firepower: the basic strength that a unit or support weapon can attack with.
-/// SL2.3 Range: the distance in game hexes, from the firing unit to the target, that
-/// unit can reach with its normal firepower factor.
-/// SL2.4 Morale: a rating of a unit's ability to withstand combat stress before
-/// 'breaking down psychologically and fleeing'. A broken unit is non-operational
-/// until receiving treatment by non-broken personel.
-struct Squad {
-    firepower: u8,
-    range: u8,
-    morale: u8,
-//  condition: Condition,
+enum Unit {
+    Squad,
 }
 
-/// Leader
-/// SL2.5 Identity: the name and rank of the leader unit.
-/// SL2.6 Leadership: a rating of a leader's ability of get the best performance
-/// out of the combat units under his command.
-/// The leadership number is added, as a modifier, to any morale or firepower
-/// tests performed by a unit under the leaders comand.
-/// Competence: a rating of a leader's tactical competence.
-/// Morale: a rating of the leader's ability to withstand combat stress before
-/// 'breaking down psychologically and fleeing'. A broken leader is non-operational
-/// until receiving treatment by non-broken personel.
-//
-struct Leader {
-    identity: String,
-    leadership: u8,
-    morale: u8,
-    // todo: competence: u8,
-    // condition: Condition,
-}
-
-impl Leader {
-    // SL2.6 Leadership affects unit performance
-    // TODO: incorporate modifier when calculating unit to hit or save morale.
-    fn get_leadership_modifier(&self) -> u8 {
-        return self.is_being_led().get_modifier()
+impl Unit {
+    fn has_moved(&self) -> bool {
+        todo!()
+    }
+    fn has_prepfired(&self) -> bool {
+        todo!()
+    }
+    fn broken(&self) -> bool {
+        todo!()
+    }
+    fn prepfired(&self) -> bool {
+        todo!()
+    }
+    fn move_to_dest(&self) -> bool {
+        todo!()
     }
 }
 
-// TODO: move to morale
-// A broken unit is psychologically broken down and unable to follow orders.
-// The units survivial instincts will trumph any army discipline until the unit is rallied.
-// A unit that is not broken is fully able to operate under combat conditions.
-// TODO: improve naming of enum - perhaps Condition or Spirit - perhaps add Surrendered.
+
+////////////////////////////////////////////////////////////////////////////////
+/// SL2. Combat Units
+///
+/// SL2.1 Unit: a unit represents any infantry squad, officer, or NCO
+/// (Non-Commissioned Officer), present on the battlefield.
+/// SL2.2 Firepower: the basic strength that a unit can attack with in combat.
+/// SL2.3 Range: the distance, calculated as the least number of game hexes,
+/// from the firing unit to the target, that a unit can reach with its normal
+/// firepower factor.
+/// SL2.4 Morale: a rating of a unit's ability to withstand combat stress before
+/// 'breaking down psychologically and fleeing'. A broken unit will remain
+/// broken until it has received successful treatment by non-broken personel.
+use std::net::Ipv4Addr;
+struct Squad {
+    // The `ars` is an identifying value, based on the United States Army
+    // Regimental System (USARS) - an organizational and classification system
+    // used by the United States Army. The `ars` provides each squad and leader
+    // on the battlefield with a unique identification, within a single
+    // regiment. A squad consists of 6-10 soldiers. To simplify
+    // identification on the battlefield, we have decided to treat the whole
+    // squad as one single entity (solider), with its unique ars.
+    //
+    // Let's say that we want to model the following army:
+    //
+    // + 1 Battalion: 100-1_000 soldiers, comprised of 3-5 companies
+    // + 3 Companies: each with 60-200 soldiers, comprised of 3-4 platoons
+    // + Platoon: 18-50 soldiers, comprised of 3-4 squads
+    // + Squad: comprised of 6-10 soldiers
+    //
+    // Example
+    // ```
+    // use std::net::Ipv4Addr;
+    //
+    // let squad_id = Ipv4Addr::new(Battalion, Company, Platoon, Squad);
+    // //1st Battalion, 3rd Company, 4th Platoon, 4th Squad becomes:
+    // let squad_id = Ipv4Addr::new(1, 3, 4, 4);
+    // ```
+    //
+    ars: Ipv4Addr,
+    firepower: u8,
+    range: u8,
+    morale: u8,
+    // TODO: A way to model that a unit is either broken or non-broken.
+    // condition: Condition,
+}
+
+impl Squad {
+    fn has_moved(&self) -> bool {
+        todo!()
+    }
+    fn stacked_with_leader(&self) -> bool {
+        todo!()
+    }
+}
+
+// SL2.6 Leadership affects unit performance
+impl Squad {
+    // TODO: modifier when calculating `unit To Hit` or `unit save morale`.
+    fn get_leadership_modifier(&self) -> u8 {
+        todo!()
+        /*
+        match self.led_by()? {
+            None => 0,
+            Some => self.led_by().leadership(),
+        }
+        */
+    }
+}
+
+/// SL2.5 Identity: the name and rank of the leader unit.
+/// SL2.6 Leadership: a rating of a leader's ability to get the best performance
+/// out of the combat units under his command.
+/// The leadership number, usually negative, is added as a modifier to any
+/// morale or firepower test performed by a unit under the leader's command.
+///
+struct Leader {
+    identity: String,
+    pub leadership: u8,
+    // Morale: a rating of the leader's ability to withstand combat stress
+    // before breaking down psychologically, and fleeing'.
+    // A broken leader is non-operational until receiving treatment by
+    // non-broken personel.
+    //
+    // TODO: Using illegal states, make sure that leadership modifier to units
+    // is only applicable if the leader himself is non-broken.
+    morale: u8,
+    // TODO: _WIP Ideas for fields to add:
+    // Competence: a rating of a leader's tactical competence.
+    //
+    // TODO: A way to model that a leader is either broken or non-broken.
+    // condition: Condition,
+}
+
+
+// TODO: _code-structure: move to morale
+// TODO: perhaps improve naming of enum?
+// TODO: perhaps add Surrendered?
+/// A non-broken unit is fully able to operate under combat conditions.
+/// A broken unit is psychologically broken down and unable to follow orders.
+/// The unit's survivial instincts will trumph any army discipline until the
+/// unit is rallied into a non-broken state.
+///
 enum Condition {
     Broken,
     Composed,
 }
 
-
-/// Support Weapon
+/// SL2.7 Weapon Type: A short description of the weapon type.
 /// All suppport weapons must be operated by combat units.
 /// Enemy support weapons can be captured and used by either side.
-/// SL2.7 _Weapon_: A short description of the weapon type.
 /// SL2.8 Penetration: a support weapon's ability to affect targets that are in
-/// line with the target hex. A machine gun with a penetration value of 3
+/// line with the target's `HexId`. A machine gun with a penetration value of 3
 /// will have equal effect on the target hex, but also on the additional 2 hexes
 /// that are in a straight line, along the line of sight, behind the target hex.
 /// A penetration value of 1 will only affect the targeted hex.
-/// SL2.9 _Breakdown_: combat environments are harsh. To express this, support weapons
-/// have a number which determines if the weapon temporarily breaks down and malfunctions
-/// during operation.
-struct SupportWeapon {
-    weapon: WeaponType,
-    firepower: u8,
-    penetration: u8,
-    range: u8,
-    breakdown: u8,
-}
-
+/// SL2.9 _Breakdown_: combat environments are harsh.
+/// To express this, support weapons have a number which determines if the
+/// weapon temporarily breaks down and malfunctions during operation.
+///
 enum WeaponType {
     Rifle,
     LMG,
@@ -132,27 +193,41 @@ enum WeaponType {
     Artillery,
 }
 
-/// Vehicle
+struct SupportWeapon {
+    weapon: WeaponType,
+    firepower: u8,
+    penetration: u8,
+    range: u8,
+    breakdown: u8,
+}
+
 /// All vehicles must be operated by crews.
 /// Enemy vechicles cannot be captured and used.
 /// 18.1
 struct Vechicle {
-    mf: u8
+    mf: u8,
 }
 
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
-/// 3. Maps
+/// SL3. Maps
+///
 /// Each hex represents a distance of 40 meters, a scale that was selected with
 /// the hopes that it captures the flow of tactical small unit combat.
+///
+/// Every hex has a unique id which can be referenced against a map database.
+/// The map database contains information about what's in the hex, including
+/// elevation data.
+struct HexId {
+    id: u32,
+    elevation: u8,
+}
 
+impl HexId {
+    fn broken(&self) -> bool {
+        todo!()
+    }
+}
 
-// Every hex has a unique id which can be referenced against a map database.
-// The map database contains information about what's in the hex, including
-// elevation data.
-struct HexId(u32);
 
 /// Returns the distance from hex A, to hex B in the number of inclusive hexes.
 fn get_distance(origin: HexId, target: HexId) -> u8 {
@@ -188,17 +263,14 @@ fn get_grid_coordinate() -> HexId {
     todo!()
 }
 
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
-/// 4. Sequence of Play
+/// SL4. Sequence of Play
+///
 /// Reaction is slower than action, therefore it is important to distinguish
 /// between the first moving player and the second moving player.
-/// A player can either attack or defend, and just like two boxers, a first mover
-/// may want to preempt an attack by moving into a defensive position - an action
-/// that would improve his defensive posture.
+/// A player can either attack or defend, and just like two boxers, a first
+/// mover may want to preempt an attack by moving into a defensive position -
+/// an action that would improve his defensive posture.
 enum Player {
     Attacker,
     Defender,
@@ -251,14 +323,17 @@ enum Phase {
     // All units, on both sides, who find themselves in the same hex must
     // attack each other. Results are calculated using the Close Combat Table (CCT).
     CloseCombat,
-
     // After Phase:CloseCombat the Player::Attacker and Player::Defender switches.
     // Once both players have each reached the PhaseCloseCombat phase
     // then the current game turn is over, and the next one starts, or the game is over.
 }
 
-// Game Loop
-
+// SL4.9 Game Turn
+// A Game Turn is considered complete when both the attacking entity and the
+// defending entity have gone through steps SL4.1 to SL4.8.
+// TODO: The Battlemanger can now increment the gameturn_counter by 1.
+// TODO: If  a scenario is being modeled then increment the Scenario Turn Record
+// Counter by 1.
 fn update_scenario_turn() {
     // Every time Player::Attacker
     // Increment scenario game turn by one.
@@ -267,16 +342,22 @@ fn update_scenario_turn() {
 }
 
 
-
 ////////////////////////////////////////////////////////////////////////////////
-// SL05. Movement Orders
+// SL5. Movement
+//
+// A trait describing anything on the battlefield that can be given an order.
+// An `Orderable` type can refuse to execute the order - usually due to being
+// in a morally broken condition, or having surrendered to enemy units.
 
-trait Orderable {
+// For any type to have the Orderable trait, must implement `fn communicate.`
+// TODO: create a trait that can be used to identify units who can communicate.
+pub trait Orderable {
     fn copythat() -> String;
 }
+
 // Handles: Phase::Advance
 // Any unit that the player selects to move must pass the checks of not being
-fn advance_unit(unit: Orderable, dest: HexId ) -> bool {
+fn advance_unit<T:Orderable>(unit: &T, dest: HexId) -> bool {
     // if unit.condition != Condition::Broken {}
     todo!()
 }
@@ -286,11 +367,11 @@ fn advance_unit(unit: Orderable, dest: HexId ) -> bool {
 fn broken_in_cover() {
     // For every broken unit, check that no enemy unit is in an adjacent hex.
     // If an enemy is adjacent then the unit has to be routed into another cover.
-    todo!("check that the unit is in a hex that is deemed of being TerrainType::Cover");
-    todo!("check that the unit is not adjacent to enemy unit.")
+    todo!("check unit is in a hex that is considered: TerrainType::Cover");
+    // TODO: todo!("check that the unit is not adjacent to enemy unit.")
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
 // Fire Orders
 fn order_prep_fire() {
     todo!("place graphical Marker::PrepFire on units which fired during Phase::PrepFire")
@@ -310,8 +391,8 @@ fn order_aimed_fire(unit: Unit, target: Unit) {
     // The unit neither prep fired nor moved. This enable the unit to fire at
     // its full firepower.
     // Unit's which Phase::PrepFire may not fire during the advancing fire phase.
-    if unit.moved {
-        String::from("The unit moved and thus cannot fire during the advanced fire phase")
+    if unit.has_moved() {
+        String::from("The unit moved and thus cannot fire during the advanced fire phase");
     } else {
         determine_fire_effect(unit, target);
     }
@@ -331,10 +412,12 @@ fn get_enpassant_targets() -> Vec<HexId> {
     // calculate if it passed through any enemy unit's LOS.
     // If a unit passed through the LOS of an enemy unit, a Marker::EnPassant
     // is added to the enemy unit in question.
-    todo!("Calculate En passant targets and add them to list of viable targets.")
+    todo!(
+        "Calculate En passant targets and add them to list of viable targets."
+    )
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
 /// OrderResponse
 /// Not every order by the commander can be executed, there can be many reasons why.
 enum OrderResponse {
@@ -351,13 +434,12 @@ fn response_to_order(response: OrderResponse) -> String {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
 /// Orders
-fn order_move(unit: HexId) {
+fn order_move(unit: Unit) {
     // Conditions to move
     // 1. The unit is not broken.
     // 2. The unit did not fire during Phase::PrepFire.
-
 
     // is_broken(unit.id)
     // has_prep_fired(unit.id)
@@ -367,8 +449,7 @@ fn order_move(unit: HexId) {
         println!("{}", response_to_order(OrderResponse::PrepFired));
     } else {
         println!("{}", response_to_order(OrderResponse::CopyThat));
-        unit.move_to_dest()
-
+        unit.move_to_dest();
     }
 
     // Instead of each game element keeping track of its own state, perhaps it's
@@ -384,33 +465,28 @@ fn move_to_dest() {
 }
 
 
-
-////////////////////////////////////////////////////////////////////////////////
 /// Markers are used to indicate state and help the player get a sense of what's
 /// going on in the battlefield.
 enum Marker {
-    PrepFire,   // The unit fired during the PrepFire phase.
-    EnPassant,  // During its movement phase, the unit passed through one or more enemy unit's LOS .
-    ProximityPanic,   // The marker indicates that a broken unit has to be moved because of enemy proximity.
+    PrepFire,       // The unit fired during the PrepFire phase.
+    EnPassant, // During its movement phase, the unit passed through one or more enemy unit's LOS .
+    ProximityPanic, // The marker indicates that a broken unit has to be moved because of enemy proximity.
 }
-
 
 // Fire Phase
 /// Firing into or through a hex with multiple terrain types has a cumulative
 /// effect.
-fn terrain_effect_movement(hex: HexId) -> u8 {}
+fn terrain_effect_movement(hex: HexId) -> u8 {
+    todo!()
+}
 
 
-
-
-////////////////////////////////////////////////////////////////////////////////
 // Game Loop
 fn game_loop() {
     todo!("Implement a state machine which steps throug the game phases.");
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
 // Fire
 /// The penetration value is always adjusted to 1 when firing from one elevation
 /// to a different elevation.
@@ -440,10 +516,10 @@ fn can_penetrate() -> bool {
 fn terrain_effect_combat(hex: HexId) -> u8 {
     // types of terrain in the hex
     // accumulate terrain types to calculate effect
+    todo!()
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
 // Close Combat
 // Handles: Phase::CloseCombat
 fn close_combat() {
@@ -452,12 +528,11 @@ fn close_combat() {
     // Update state (remove casulties).
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
-// 5. Movement
+// SL5. Movement
 // Each hex  in the game represents 50 meters (from border to border).
-// SL5.1 Only units that did not move during the Phase::PrepFire phase may move during
-// the Phase::Movement.
+// SL5.1 Only units that did not move during the phase Phase::PrepFire
+// move during the phase Phase::Movement.
 // TODO: get can't move because prep fired working.
 /* fn unit_can_move(unit: Orderable) -> Option<bool, Feedback> {
     if !GameState.PrepFire.contains(unit) {
@@ -482,14 +557,14 @@ fn close_combat() {
 enum MF {
     Squad = 4, // SL5.41
     Leader = 6, // SL5.42
-    // Vehicles MF is a field of vechicle structs.
-    // TODO: implement Vehicle struct with MF.
+               // Vehicles MF is a field of vechicle structs.
+               // TODO: implement Vehicle struct with MF.
 }
 
 // SL5.44 If a squad spends the entire Phase::Movement in the company with
 // a leader, then it will recive a MF bonus of 2.
 // TODO: handle led by Leader and stacked with Leader for entire movement phase.
-fn calcuate_mf_bonus(s:Squad) -> u8 {
+fn calcuate_mf_bonus(s: Squad) -> u8 {
     if s.stacked_with_leader() {
         2
     } else {
@@ -502,25 +577,46 @@ fn calcuate_mf_bonus(s:Squad) -> u8 {
 // SL5.52 A unit moving from one road hex to another will only pay 1 MF for every second
 // road hex it traverses.
 // TODO: read up on enums and data types.
-enum TerrainCost {
-    OpenGround = 1,
-    Shellhole = 1,
-    Wheatfield = 1,
-    OnRoad = 1,
-    OntoRoad = 1,
-    Woods = 2,
-    EnterBuilding = 2,
-    WithinBuilding = 2,
-    OverWall=1,
+enum Terrain {
+    OpenGround,
+    Shellhole,
+    Wheatfield,
+    OnRoad,
+    OntoRoad,
+    Woods,
+    EnterBuilding,
+    WithinBuilding,
+    OverWall,
 }
 
-// SL5.53 A Squad moving upwards, from TerrainCost::OpenGround, OnRoad, Building,
+impl Terrain {
+    //TODO: based on unit type or armour.
+    //TODO: _consider: should these be pulled from db?
+    fn movement_cost(&self) -> u32 {
+        match self {
+            Terrain::OpenGround => 1,
+            Terrain::Shellhole => 1,
+            Terrain::Wheatfield => 1,
+            Terrain::OnRoad => 1,
+            Terrain::OntoRoad => 1,
+            Terrain::Woods => 2,
+            Terrain::EnterBuilding => 2,
+            Terrain::WithinBuilding => 2,
+            Terrain::OverWall => 1,
+        }
+    }
+}
+// SL5.53 A Squad moving upwards
+// for example, from TerrainCost::OpenGround, OnRoad, Building,
 // and Woods, from one terrain level to a higher one, will double its MF cost.
 // Moving along same level carries no bonus or additional cost.
 // Nor is there a bonus for moving from one level to a lower level.
 // TODO: add functionality to double terrain cost due to higher ground.
-fn tfx_higher_ground<S:Squad>(orig: HexId, dest: HexId) -> bool {
-    dest.elevation > orig.elevation
+impl Squad {
+
+    fn tfx_higher_ground(&self, orig: HexId, dest: HexId) -> bool {
+        dest.elevation > orig.elevation
+    }
 }
 
 // SL5.54 Terrain effects are cummulative: hexes containig more than one terrain
@@ -534,9 +630,11 @@ fn tfx_higher_ground<S:Squad>(orig: HexId, dest: HexId) -> bool {
 // SL5.70-Carrying support weapons and portage costs.
 
 
+////////////////////////////////////////////////////////////////////////////////
+/// SL6. Stacking
 
 ////////////////////////////////////////////////////////////////////////////////
-/// 7. Line of Sight (LOS)
+/// SL7. Line of Sight (LOS)
 // SL7.1 Line of sight - what a unit can "see" and fire upon, is measured from
 // the center dot of the hex (of the unit) and a straight line to the center dot
 // of the target hex.
@@ -562,36 +660,33 @@ fn los_obstructed(orig: HexId, dest: HexId) -> bool {
 
 // SL7.4
 
-
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL8
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL16 Defensive Fire Principles
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL16 Defensive Fire Principles
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL15 Leadership
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL16 Defensive Fire Principles
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL16 Defensive Fire Principles
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL17 Machine Guns
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL18 Fate
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL19 Movement and Fire
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // SL20 Close Combat
+//
