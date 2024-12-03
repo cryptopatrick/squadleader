@@ -1,6 +1,6 @@
 [package]
 name = "squadleader"
-version = "0.0.1" #:version
+version = "0.0.2" #:version
 authors = ["CryptoPatrick <cryptopatrick@gmail.com>"]
 description = """
 A type system and rule engine to model small unit infantry combat.
