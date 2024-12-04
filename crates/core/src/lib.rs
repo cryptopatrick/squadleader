@@ -27,15 +27,24 @@
 /// on the target. Finally, every target has a health value - how much damage it
 /// can withstand before it is destroyed.
 struct Target {
-    location: HexId,
+    location: Hex,
     elevation: u8,
     armor: u8,
     health: u8,
 }
 
-
-
+////////////////////////////////////////////////////////////////////////////////
+/// SL2. Combat Units
+///
+/// SL2.1 Unit: a unit represents any infantry squad, officer, or NCO
+/// (Non-Commissioned Officer), present on the battlefield.
+//  TODO: consider weather to treat Armour crews and AT Gun crews as units.
+/// Unit is a Generic Type representing any unit (leader, squad, armour crew,
+/// Anti Tank Gun crew) on the battlefield.
 enum Unit {
+    Armour,
+    ATGun,
+    Leader,
     Squad,
 }
 
@@ -43,26 +52,20 @@ impl Unit {
     fn has_moved(&self) -> bool {
         todo!()
     }
+
     fn has_prepfired(&self) -> bool {
         todo!()
     }
+
     fn broken(&self) -> bool {
         todo!()
     }
-    fn prepfired(&self) -> bool {
-        todo!()
-    }
+
     fn move_to_dest(&self) -> bool {
         todo!()
     }
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-/// SL2. Combat Units
-///
-/// SL2.1 Unit: a unit represents any infantry squad, officer, or NCO
-/// (Non-Commissioned Officer), present on the battlefield.
 /// SL2.2 Firepower: the basic strength that a unit can attack with in combat.
 /// SL2.3 Range: the distance, calculated as the least number of game hexes,
 /// from the firing unit to the target, that a unit can reach with its normal
@@ -151,7 +154,6 @@ struct Leader {
     // condition: Condition,
 }
 
-
 // TODO: _code-structure: move to morale
 // TODO: perhaps improve naming of enum?
 // TODO: perhaps add Surrendered?
@@ -169,7 +171,7 @@ enum Condition {
 /// All suppport weapons must be operated by combat units.
 /// Enemy support weapons can be captured and used by either side.
 /// SL2.8 Penetration: a support weapon's ability to affect targets that are in
-/// line with the target's `HexId`. A machine gun with a penetration value of 3
+/// line with the target's `Hex`. A machine gun with a penetration value of 3
 /// will have equal effect on the target hex, but also on the additional 2 hexes
 /// that are in a straight line, along the line of sight, behind the target hex.
 /// A penetration value of 1 will only affect the targeted hex.
@@ -201,9 +203,9 @@ struct SupportWeapon {
     breakdown: u8,
 }
 
+/// SL18.1
 /// All vehicles must be operated by crews.
 /// Enemy vechicles cannot be captured and used.
-/// 18.1
 struct Vechicle {
     mf: u8,
 }
@@ -211,26 +213,52 @@ struct Vechicle {
 ////////////////////////////////////////////////////////////////////////////////
 /// SL3. Maps
 ///
-/// Each hex represents a distance of 40 meters, a scale that was selected with
-/// the hopes that it captures the flow of tactical small unit combat.
+/// Each hex represents a distance of meters on the battlefield.
+/// The default hexdistance is 40 meters, but that value can be changed.
+/// The distance must be chosen with care and with intetion to capture the flow
+/// of tactical small unit infantry combat.
+///
+use std::sync::atomic::{AtomicU8, Ordering};
+// TODO: add functionality to change the HEXDISTANCE.
+static HEXDISTANCE: AtomicU8 = AtomicU8::new(40);
+
+/// SL3.2 A hexagon shaped grid is superimposed on the battlefield map.
+/// The default is for the hexagon grid to be six-sided and visible.
+///
+// TODO: Add functionality to toogle the visibility of the hexagon.
+// const mut CONST DRAWHEXAGONS:bool = true;
 ///
 /// Every hex has a unique id which can be referenced against a map database.
 /// The map database contains information about what's in the hex, including
-/// elevation data.
-struct HexId {
+/// elevation data, and the category of terrain that the hex belongs to.
+// TODO: Add map database connectivity functionlality.
+///
+/// SL3.6 Map designers can include aesthetic elements which have no terrain
+/// effect on movement. It's important to note that each hex on a map __can__
+/// belong to more than one terrain category. The effect of this on movement
+/// and combat resolution is __cumulative__.
+/// For example, a hex can contain both a TERRAIN::HEDGES and TERRAIN::WOODS.
+/// The cost of moving through that hex would be calculated by adding the cost
+/// of both terrain types.
+///
+//  TODO: Implement terrain category in database.
+struct Hex {
     id: u32,
     elevation: u8,
+    // TODO: not super happy of type-setting terrain as a Vec<Terrain>, but how
+    // else can we handle the fact that a single hex could contain
+    // a house on a hill surrounded by a hedge?
+    terrain: Vec<Terrain>,
 }
 
-impl HexId {
+impl Hex {
     fn broken(&self) -> bool {
         todo!()
     }
 }
 
-
 /// Returns the distance from hex A, to hex B in the number of inclusive hexes.
-fn get_distance(origin: HexId, target: HexId) -> u8 {
+fn get_distance(origin: Hex, target: Hex) -> u8 {
     todo!()
 }
 
@@ -241,59 +269,96 @@ fn get_distance(origin: HexId, target: HexId) -> u8 {
 /// Each hex has a center which is used to calculate Line of Sight (LOS) to other
 /// hexes, for targeting purposes. A unit (except for mortar units) can only fire
 /// on targets that they can see (that is in their LOS).
-fn get_los(origin: HexId, target: HexId) -> bool {
+fn get_los(origin: Hex, target: Hex) -> bool {
     todo!()
 }
 
-/// Terrain will affect how fast units can move.
+/// SL3.1 Terrain will affect how fast units can move through a hex on the map.
+/// The Terrain Effects Chart (or TEC) is a database containing a description of
+/// all terrain types.
+//  TODO: add TEC database and connectivity.
+///
 /// The Terrain Effect Function (TEF) calculates how a particular type of terrain
 /// affects movement. A hex can contain multiple terrain types.
 /// The cost of moving through such a hex is cumulative.
-fn get_terrain_effect_on_move(hex: HexId) -> u8 {
+fn get_terrain_effect_on_move(hex: Hex) -> u8 {
     // types of terrain in the hex
-
     // SL3.8 accumulate terrain types to calculate effect
     todo!();
 }
+/// SL3.3 Each hex on the map has a center point. This point is used to
+/// calculating line of sight (LOS) between two different hexes on a map.
+/// These points are important because combat units are assumed to be firing
+/// from these center points towards center points in other hexes.
+
+/// The LOS calculations are persisted in the each map database and then
+/// used during simulation to determine if there's a clear LOS between two hexes.
+//  TODO: write a function that can, if provided with a map data file, generate
+//  LOS between two hexes on that map and persist it.
+
+/// SL3.4 Map designers should aim for an `isomorphic` quality in their maps
+/// making it possible to combine the edge of each map to any other map.
+//  TODO: write functionality to determine if two maps can be combined, edge to
+//  edge, and flag if the maps are in fact incompatible.
+/// SL3.7 The half hexes along the edge of the a map are all treated as full
+/// hexes in terms of terrain and line of sight.
+//  TODO: EDGE CASE: edge of maps contain half hexes to enable isomorphic
+//  combination of maps. Write functionality to handle this edge case.
 
 /// SL3.5 Each hex has a unique identifier which commanders can use to communicate
 /// unit movement and targeting.
-fn get_grid_coordinate() -> HexId {
-    // Normally used when clicking on a map and reading the HexId of the hex.
+//  TODO: consider how Hex of edge hexes is determined for combined maps.
+//  The likely solution is to have the halves of each edge hex to create a new
+//  hex, however the id of that hex is something that needs to be considered.
+/// The classic Hex format is:
+/// 1AB3 where <MAPID(1A)-ROWLETTER(B)-ROWHEXNUMBER(3)>
+fn get_grid_coordinate() -> Hex {
+    // Normally used when clicking on a map and reading the Hex of the hex.
     todo!()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// SL4. Sequence of Play
 ///
+/// A game turn consists of two complete eight phase player turns. Meaning, each
+/// player will perform the 8 phases, for a combined total of 16 phases.
+/// The 16 phases represent one complete game turn.
+/// Each game turn represents 2 minutes of actual time.
+use std::sync::atomic::{AtomicU8, Ordering};
+// TODO: add functionality to change the length of a GAMETURN.
+static GAMETURN: AtomicU8 = AtomicU8::new(2);
+
 /// Reaction is slower than action, therefore it is important to distinguish
 /// between the first moving player and the second moving player.
 /// A player can either attack or defend, and just like two boxers, a first
 /// mover may want to preempt an attack by moving into a defensive position -
 /// an action that would improve his defensive posture.
+/// In each game turn, one player will be the defender, while the othe will be
+/// the attacker, they then switch and the defender becomes the attacker.
+/// It should be noted that it's the attacker who goes through the phases.
 enum Player {
     Attacker,
     Defender,
 }
 
-/// A game turn consists of two complete eight phase player turns.
-/// Each game turn represents 2 minutes of actual time.
-/// The player who moves first is refered to as the Player::Attacker, while
-/// the other player is refered to as Player::Defender.
+/// The player who moves first in a game turn is refered to as the
+/// Player::Attacker, while the other player is refered to as Player::Defender.
 enum Phase {
     // SL4.1
     // Both players can attempt to repair malfunctioning support weapons and
-    // attempt to rally broken troops.
+    // attempt to rally broken units.
+    // TODO: add fn repair_malfunctioning_support_weapon()
+    // TODO: add fn rally_broken_unit().
     Rally,
     // SL4.2
     // The Player::Attacker may order any of his units to fire on any
     // enemy units that are within the unit's line of sight.
-    // A unit that fire under this phase is indicated graphically by a
+    // TODO: Any unit that fires under this phase is indicated graphically by a
     // Marker::PrepFire.
     PrepFire,
     // SL4.3
-    // Player::Attacker may order unbroken units that did not fire during the
-    // Phase::PrepFire to move.
+    // Player::Attacker may order unbroken units that did not Phase::PrepFire
+    // to execute a movement order.
     Movement,
     // SL4.4
     // Player::Defender may order any unbroken units to fire at any enemy units
@@ -301,46 +366,59 @@ enum Phase {
     // during Phase::Movement.
     DefensiveFire,
     // SL4.5
-    // Player::Attacking may now order any of his units who moved during
+    // Player::Attacker may now order any of his units who moved during
     // Phase::Movement to fire at enemy units. The penalty for firing after
-    // movement is that firepower is halfed, rounded up.
+    // movement is that firepower is halfed, rounded down.
+    // TODO: assert that firepower is halved (rounded down) for units that moved.
     // Units that did neither Phase::PrepFire nor Phase::Movement can fire at their
     // full firepower.
     // At the end of the AdvancingFire phase all Marker::PreFire are removed.
     // TODO: function for removing Marker::Prepfire.
     AdvancingFire,
     // SL4.6
-    // Both players move their broken units into cover of terrain type:
-    // Terrain::Wood, Terrain::Building. A unit
+    // Both players, first Player::Attacker, then Player::Defender, __must __
+    // move their broken units into cover of terrain type either
+    // Terrain::Wood or Terrain::Building. A unit that is already in one of
+    // of these two terrain types, need not move, __unless__, it is adjacent
+    // to an enemy unit.
+    // TODO: fn to check if a broken unit has to move despite being located in a
+    // Wood hex or Building hex, due to being adjacent to an enemy unit.
     Rout,
     // SL4.7
     // As a final push, Player::Attacker may now move any of his non-broken units
     // one hex forward. The hex moved into is allowed to contain enemy units.
     // This is the only phase in which combat troops are allowed to be moved into
     // a hex occupied by enemy units.
+    // TODO: add fn to prohibit all movement of opposing units into the
+    // same hex, unless it's Player::Attacker doing so in Phase::Advance.
+    // TODO: consider exception 27, 53.4, 56, 57.
     Advance,
     // SL4.8
-    // All units, on both sides, who find themselves in the same hex must
+    // All units, on both sides, who find themselves occupying the same hex must
     // attack each other. Results are calculated using the Close Combat Table (CCT).
     CloseCombat,
-    // After Phase:CloseCombat the Player::Attacker and Player::Defender switches.
-    // Once both players have each reached the PhaseCloseCombat phase
-    // then the current game turn is over, and the next one starts, or the game is over.
 }
 
 // SL4.9 Game Turn
+// After the end of SL4.8 Phase:CloseCombat the Player::Attacker and
+// Player::Defender switches.
+// Once both players have each reached Phase::CloseCombat, then the current
+// game turn is over, and the next one starts, or the game is over.
+//
 // A Game Turn is considered complete when both the attacking entity and the
 // defending entity have gone through steps SL4.1 to SL4.8.
 // TODO: The Battlemanger can now increment the gameturn_counter by 1.
 // TODO: If  a scenario is being modeled then increment the Scenario Turn Record
 // Counter by 1.
 fn update_scenario_turn() {
-    // Every time Player::Attacker
-    // Increment scenario game turn by one.
+    // Phase.counter() mod 16 represents the number of complete Game Turns.
+    // Everytime the result is 0, increment the scenario game turn by one.
     // Check if scenario game turn has reached limit and the game is over.
+    // TODO: implement Phase.counter() mod 16
+    // TODO: implement check if Phase.counter() > Scenario Turn Record Chart
+    // which would mean that the simulation/game is over.
     todo!()
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // SL5. Movement
@@ -357,7 +435,7 @@ pub trait Orderable {
 
 // Handles: Phase::Advance
 // Any unit that the player selects to move must pass the checks of not being
-fn advance_unit<T:Orderable>(unit: &T, dest: HexId) -> bool {
+fn advance_unit<T: Orderable>(unit: &T, dest: Hex) -> bool {
     // if unit.condition != Condition::Broken {}
     todo!()
 }
@@ -370,7 +448,6 @@ fn broken_in_cover() {
     todo!("check unit is in a hex that is considered: TerrainType::Cover");
     // TODO: todo!("check that the unit is not adjacent to enemy unit.")
 }
-
 
 // Fire Orders
 fn order_prep_fire() {
@@ -407,7 +484,7 @@ fn determine_fire_effect(attacker: Unit, defender: Unit) {
 // that are either: 1) in their current LOS, or, 2) moved through their LOS
 // during Phase::Movement. All targets that passed through the LOS are marked
 // as Marker::EnPassant, after the chess rule.
-fn get_enpassant_targets() -> Vec<HexId> {
+fn get_enpassant_targets() -> Vec<Hex> {
     // For each unit that moved during the movement phase
     // calculate if it passed through any enemy unit's LOS.
     // If a unit passed through the LOS of an enemy unit, a Marker::EnPassant
@@ -416,7 +493,6 @@ fn get_enpassant_targets() -> Vec<HexId> {
         "Calculate En passant targets and add them to list of viable targets."
     )
 }
-
 
 /// OrderResponse
 /// Not every order by the commander can be executed, there can be many reasons why.
@@ -434,7 +510,6 @@ fn response_to_order(response: OrderResponse) -> String {
     }
 }
 
-
 /// Orders
 fn order_move(unit: Unit) {
     // Conditions to move
@@ -445,7 +520,7 @@ fn order_move(unit: Unit) {
     // has_prep_fired(unit.id)
     if unit.broken() {
         println!("{}", response_to_order(OrderResponse::UnitBroken));
-    } else if unit.prepfired() {
+    } else if unit.has_prepfired() {
         println!("{}", response_to_order(OrderResponse::PrepFired));
     } else {
         println!("{}", response_to_order(OrderResponse::CopyThat));
@@ -464,7 +539,6 @@ fn move_to_dest() {
     todo!()
 }
 
-
 /// Markers are used to indicate state and help the player get a sense of what's
 /// going on in the battlefield.
 enum Marker {
@@ -476,22 +550,20 @@ enum Marker {
 // Fire Phase
 /// Firing into or through a hex with multiple terrain types has a cumulative
 /// effect.
-fn terrain_effect_movement(hex: HexId) -> u8 {
+fn terrain_effect_movement(hex: Hex) -> u8 {
     todo!()
 }
-
 
 // Game Loop
 fn game_loop() {
     todo!("Implement a state machine which steps throug the game phases.");
 }
 
-
 // Fire
 /// The penetration value is always adjusted to 1 when firing from one elevation
 /// to a different elevation.
 /// Returns the adjusted penetration value of the unit.
-fn sw_calc_penetration(origin: &HexId, target: &HexId) -> Option<u8> {
+fn sw_calc_penetration(origin: &Hex, target: &Hex) -> Option<u8> {
     if origin.elevation == target.elevation {
         Some(1)
     } else {
@@ -513,12 +585,11 @@ fn can_penetrate() -> bool {
     todo!()
 }
 
-fn terrain_effect_combat(hex: HexId) -> u8 {
+fn terrain_effect_combat(hex: Hex) -> u8 {
     // types of terrain in the hex
     // accumulate terrain types to calculate effect
     todo!()
 }
-
 
 // Close Combat
 // Handles: Phase::CloseCombat
@@ -613,8 +684,7 @@ impl Terrain {
 // Nor is there a bonus for moving from one level to a lower level.
 // TODO: add functionality to double terrain cost due to higher ground.
 impl Squad {
-
-    fn tfx_higher_ground(&self, orig: HexId, dest: HexId) -> bool {
+    fn tfx_higher_ground(&self, orig: Hex, dest: Hex) -> bool {
         dest.elevation > orig.elevation
     }
 }
@@ -629,7 +699,6 @@ impl Squad {
 
 // SL5.70-Carrying support weapons and portage costs.
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /// SL6. Stacking
 
@@ -640,7 +709,7 @@ impl Squad {
 // of the target hex.
 // If an obstacle on the map can be observed on both sides of this line then the
 // LOS is obstructed.
-fn los_obstructed(orig: HexId, dest: HexId) -> bool {
+fn los_obstructed(orig: Hex, dest: Hex) -> bool {
     // TODO: setup a database to hold all hex data, including LOS
     todo!("Look-table or database hit to get LOS for passed hexes.")
 }
