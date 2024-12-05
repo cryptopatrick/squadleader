@@ -19,7 +19,14 @@
 // –Carl von Clausewitz
 
 ////////////////////////////////////////////////////////////////////////////////
-/// R1.1
+// Place all imports below:
+use std::collections::HashMap;
+use std::marker;
+
+////////////////////////////////////////////////////////////////////////////////
+/// SL1. Addmendums, labeled AX.Y, made to the original SL rule set.
+///
+/// A1.1
 /// A generic struct representing any target (building, unit, armour, etc).
 /// Every target has a location (in terms of longitude, latitude), and an
 /// elevation. Every target also has an armor value - a value that has to be
@@ -33,6 +40,26 @@ struct Target {
     health: u8,
 }
 
+/// A struct reponsible for tracking relevant events on the battlefield.
+struct BattleManager {}
+
+/// The ScenarioManager is reponsible for tracking scenrio relevant events on
+/// the battlefield. TODO: give examples of scenerio events.
+struct ScenarioManager {}
+
+/// Marker States
+// A1.2
+// The state of a non-broken combat unit at the start of a new Game Turn.
+struct Unphased;
+// SL5.1
+// Any combat unit that moved during Phase::PrepFire of the current GameTurn.
+// TODO: Decide on naming of states: struct PrepFireMoved;
+struct PrepFired;
+// Asserts SL5.75
+// TODO: consider other solutions here.
+// TODO: what types of support weapons are there?
+struct FiredSupportWeapon;
+
 ////////////////////////////////////////////////////////////////////////////////
 /// SL2. Combat Units
 ///
@@ -41,7 +68,10 @@ struct Target {
 //  TODO: consider weather to treat Armour crews and AT Gun crews as units.
 /// Unit is a Generic Type representing any unit (leader, squad, armour crew,
 /// Anti Tank Gun crew) on the battlefield.
+#[derive(Debug)]
 enum Unit {
+    // TODO: _consider: Are Armour and ATGun treated differently in terms of
+    // PrepFire and limitations to Movement?
     Armour,
     ATGun,
     Leader,
@@ -74,7 +104,8 @@ impl Unit {
 /// 'breaking down psychologically and fleeing'. A broken unit will remain
 /// broken until it has received successful treatment by non-broken personel.
 use std::net::Ipv4Addr;
-struct Squad {
+#[derive(Debug)]
+struct Squad<State> {
     // The `ars` is an identifying value, based on the United States Army
     // Regimental System (USARS) - an organizational and classification system
     // used by the United States Army. The `ars` provides each squad and leader
@@ -99,15 +130,17 @@ struct Squad {
     // let squad_id = Ipv4Addr::new(1, 3, 4, 4);
     // ```
     //
-    ars: Ipv4Addr,
+    pub ars: Ipv4Addr,
     firepower: u8,
     range: u8,
     morale: u8,
-    // TODO: A way to model that a unit is either broken or non-broken.
-    // condition: Condition,
+    // Marker Type used to model illegal actions based on state.
+    // See for example SL5.1.
+    _state: marker::PhantomData<State>, // TODO: A way to model that a unit is either broken or non-broken.
+                                        // condition: Condition,
 }
 
-impl Squad {
+impl Squad<Unphased> {
     fn has_moved(&self) -> bool {
         todo!()
     }
@@ -117,7 +150,7 @@ impl Squad {
 }
 
 // SL2.6 Leadership affects unit performance
-impl Squad {
+impl Squad<Unphased> {
     // TODO: modifier when calculating `unit To Hit` or `unit save morale`.
     fn get_leadership_modifier(&self) -> u8 {
         todo!()
@@ -218,7 +251,6 @@ struct Vechicle {
 /// The distance must be chosen with care and with intetion to capture the flow
 /// of tactical small unit infantry combat.
 ///
-use std::sync::atomic::{AtomicU8, Ordering};
 // TODO: add functionality to change the HEXDISTANCE.
 static HEXDISTANCE: AtomicU8 = AtomicU8::new(40);
 
@@ -433,6 +465,12 @@ pub trait Orderable {
     fn copythat() -> String;
 }
 
+/// A trait denotating any type that can carry equipment and portable weapons.
+pub trait Carrier {
+    fn carry() -> bool;
+    fn abandon() -> bool;
+}
+
 // Handles: Phase::Advance
 // Any unit that the player selects to move must pass the checks of not being
 fn advance_unit<T: Orderable>(unit: &T, dest: Hex) -> bool {
@@ -601,17 +639,27 @@ fn close_combat() {
 
 ////////////////////////////////////////////////////////////////////////////////
 // SL5. Movement
-// Each hex  in the game represents 50 meters (from border to border).
-// SL5.1 Only units that did not move during the phase Phase::PrepFire
-// move during the phase Phase::Movement.
-// TODO: get can't move because prep fired working.
-/* fn unit_can_move(unit: Orderable) -> Option<bool, Feedback> {
-    if !GameState.PrepFire.contains(unit) {
-        Some(true,())
-    } else {
-        Some(false, Feedback::UNIT_PREP_FIRED)
+//
+// TODO: look to create a global const that can be set.
+// TODO: check if this information is redundant.
+// Each hex in the game represents 40 meters (from hex border to hex border).
+//
+// SL5.1 Only units that _did not fire_ during the Phase::PrepFire may move
+// during the ensuing Phase::Movement.
+// TODO: mechanism for limiting condition to _ensuing_.
+// TODO: _consider using TypeState to assert rules.
+impl BattleManager {
+    fn unit_can_move(&self, u: &Unit, p: &Phase) {
+        todo!()
+        /*
+        // Check the HashMap, did the unit move during the prep fire phase?
+        match !self.Moved.contains_key(p, u) {
+            Ok() => return true,
+            Err(e) => return RuleBreak::E5100, //UNIT_TRYING_TO_MOVE_POST_PREP_FIRED
+        }
+        */
     }
-} */
+}
 
 // SL5.2 Units can move inside the limits of their Movement Factors (MF).
 // The number of hexes that the unit can move is a function of its MF and
@@ -635,12 +683,15 @@ enum MF {
 // SL5.44 If a squad spends the entire Phase::Movement in the company with
 // a leader, then it will recive a MF bonus of 2.
 // TODO: handle led by Leader and stacked with Leader for entire movement phase.
-fn calcuate_mf_bonus(s: Squad) -> u8 {
+fn calcuate_mf_bonus(s: Squad<Unphased>) {
+    todo!()
+    /*
     if s.stacked_with_leader() {
         2
     } else {
         0
     }
+    */
 }
 
 // SL5.5 Moving into a hex has a MF cost, depending on the type of terrain.
@@ -677,13 +728,15 @@ impl Terrain {
         }
     }
 }
-// SL5.53 A Squad moving upwards
-// for example, from TerrainCost::OpenGround, OnRoad, Building,
-// and Woods, from one terrain level to a higher one, will double its MF cost.
+// SL5.53 A Squad moving upwards, for example from TerrainCost::OpenGround;
+// OnRoad, Building, and Woods, from one terrain level to a higher one, will
+// double its MF cost.
+//
 // Moving along same level carries no bonus or additional cost.
 // Nor is there a bonus for moving from one level to a lower level.
 // TODO: add functionality to double terrain cost due to higher ground.
-impl Squad {
+// TODO: verify the use of Type State below.
+impl Squad<Unphased> {
     fn tfx_higher_ground(&self, orig: Hex, dest: Hex) -> bool {
         dest.elevation > orig.elevation
     }
@@ -698,6 +751,66 @@ impl Squad {
 // TODO: add fn which prohibts movements into enemy controlled hex.
 
 // SL5.70-Carrying support weapons and portage costs.
+//
+
+// SL5.73 Regardless of terrain and/or weapons portage, a squad or crew may
+// always carry up to 5 (TODO: turn into global CONST?) portage points, and
+// a leader carry 3 portage points, up to 1 hex during the `Phase::Advance`.
+fn carry_during_advance_phase(c: impl Carrier, p: Phase) {
+    todo!()
+    /*
+    if c::Squad && u.portage < 6 && p == Phase::Advance {
+        // TODO: instruct BattleManager / SceneManger to move unit one hex.
+    } else if u::Leader && u.portage < 4 && p::Advance {
+        // TODO: instruct BattleManager / SceneManger to move unit one hex.
+    } else {
+        // TODO: Improve mechanism for Informing General.
+        println!("Unit is too encoumbered to move.")
+    }
+    */
+}
+
+// SL5.74 A `Squad` carrying 4 or more portage points, or a `Leader` carrying 2
+// or more portage points (TODO: turn into global CONST), during the
+// `Phase::Movement` may _not_ fire a `SupportWeapon` during the _ensuing_
+// `Phase::AdvancedFire`.
+fn may_fire_support_weapon(u: Unit, s: SupportWeapon, p: Phase) {
+    todo!()
+    /*
+    if p::AdvanceFire && (u::Leader.portage < 2 || u::Squad.portage < 4) {
+        // May fire support weapon.
+        // TODO: issue to handler responsible for the firing of weapons.
+    } else {
+        // TODO: add "Inform General" functionality to inform when commands are
+        // break a rule. Also log to BattleManager?
+        //
+        println!("Unit {:?} may not fire the support weapon {:?} because the unit
+        exceeded the allowed portage points during the movement phase {:?}.", u, s, p);
+    }
+    */
+}
+
+// Handled by A1.2.
+// TODO: move this to fire section.
+// SL5.75 An infantry unit may only fire one _type_ of `SupportWeapon` in the
+// same Phase::FirePhase, Phase::PrepFire, or Phase::AdvanceFire.
+// WeaponType::{LMG, MMG, HMG} are all considred weapons of the same _type_.
+// TODO: enforce this how? Perhaps by each unit tracking which weapon type
+// it has fired in the same fire phase:
+//
+// ```
+// Unit.fire(w: WeaponType) {
+//  if !Unit.weapon_types_fired.contains(w) {
+//      w.fire();
+//      Unit.weapon_types_fired.insert(w)
+//  }
+// }
+// ```
+// ...or let a battlemanager track and decide if a unit is allowed to fire
+// a particular type of support weapon.
+
+// SL5.76 Portage costs are assumed to refer to `Squad` usage costs.
+// TODO: Consider how `Leader` should be handled with relation to portage cost.
 
 ////////////////////////////////////////////////////////////////////////////////
 /// SL6. Stacking
