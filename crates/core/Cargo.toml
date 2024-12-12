@@ -17,3 +17,5 @@ edition = "2021"
 rust-version = "1.72"
 
 [dependencies]
+# Mis-en-place in wait for this package to be built.
+# scenario = {path = "../scenario"}

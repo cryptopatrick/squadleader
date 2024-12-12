@@ -17,3 +17,11 @@ edition = "2021"
 rust-version = "1.72"
 
 [dependencies]
+
+[workspaces]
+# postit: to create a package without git: carg new --vcs none --lib <name>
+# postit: to only build a specific package: cargo -p crates/core 
+# postit: running `cargo build` from the root will build all packages and put
+#   the result in a `target` folder at root.
+
+members = ["crates/core", "crates/scenario"]
