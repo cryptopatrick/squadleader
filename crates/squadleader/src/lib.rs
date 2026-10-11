@@ -19,6 +19,11 @@
 // "Courage, above all things, is the first quality of a warrior."
 // –Carl von Clausewitz
 
+
+pub fn run_squadleader() {
+    println!("Place your SL logic here");
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Place all imports below:
 use std::collections::HashMap;
