@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "crates/squadleader",
-    "crates/scenario",
+    "crates/squadleader-scenario",
 ]
 resolver = "2"

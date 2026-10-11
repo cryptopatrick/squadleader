@@ -1,5 +1,5 @@
 [package]
-name = "scenario"
+name = "squadleader-scenario"
 version = "0.1.0"
 edition = "2021"
 
