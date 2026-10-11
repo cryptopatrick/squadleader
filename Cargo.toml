@@ -5,9 +5,9 @@ authors = ["CryptoPatrick <cryptopatrick@gmail.com>"]
 description = """
 A type system and rule engine to model small unit infantry combat.
 """
-documentation = "https://github.com/CryptoPatrick/squadleader"
-homepage = "https://github.com/CryptoPatrick/squadleader"
-repository = "https://github.com/CryptoPatrick/squadleader"
+documentation = "https://docs.rs/squadleader"
+homepage = "https://github.com/cryptopatrick/squadleader"
+repository = "https://github.com/cryptopatrick/squadleader"
 keywords = ["games", "game-engine", "modeling", "simulation"]
 categories = ["game-development"]
 license = "Unlicense OR MIT"
@@ -15,6 +15,13 @@ exclude = ["/.github/", "/ci/", "/pkg/brew", "/benchsuite/", "/scripts/"]
 autotests = false
 edition = "2021"
 rust-version = "1.72"
+
+
+[lib]
+name = "squadleader"
+path = "crates/core/src/lib.rs"
+
+
 
 [dependencies]
 
