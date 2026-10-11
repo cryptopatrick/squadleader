@@ -2411,16 +2411,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scenario"
-version = "0.1.0"
-dependencies = [
- "eframe",
- "rfd",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2594,7 +2584,17 @@ dependencies = [
 
 [[package]]
 name = "squadleader"
-version = "0.0.3"
+version = "0.0.4"
+
+[[package]]
+name = "squadleader-scenario"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "rfd",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "stable_deref_trait"
